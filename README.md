@@ -6,7 +6,7 @@ This is the official PyTorch implementation of the paper:
 
 Authors: ***Anh N. Nhu, Ngoc-Anh Le, Shihang Li, Thang D.V. Truong***
 
-In the Proceedings of 22nd International Conference on Machine Learning and Applications (IEEE ICMLA) 2023.
+To appear the Proceedings of 22nd International Conference on Machine Learning and Applications (IEEE ICMLA) 2023.
 
 Code 
 ----
