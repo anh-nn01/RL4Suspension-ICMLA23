@@ -26,7 +26,7 @@ Code
   * (4) update weights & save checkpoints.
 * `execute_training.py`: contains implementation of Ornstein-Uhlenbeck noise, buffer stack, and code to execute the DDPG training framework.
 
-Training
+Training and Evluation
 ----
 To execute the training process, please use `execute_training.py`. 
 
@@ -34,6 +34,8 @@ Specifically, please change checkpoint names for Q-Network and Policy Network in
 ```
   python3 execute_training.py
 ```
+
+Once you train the model (or use our pretrained model), you may find the `evaluation.ipynb` notebook to be helpful. Specifically, it shows visualization of comparative performance between our proposed DDPG-based Active Suspension Control to Passive System as well as the dynamically controlled stiffness and damping coefficient.
 
 Trained Models
 ----
