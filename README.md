@@ -1,12 +1,12 @@
 # RL4Suspension-ICMLA23
 
-This is the official PyTorch implementation of the paper:
+This is the official PyTorch implementation of the paper: https://ieeexplore.ieee.org/document/10459806
 
 **Physics-Guided Reinforcement Learning System for Realistic Vehicle Active Suspension Control** 
 
 Authors: ***Anh N. Nhu, Ngoc-Anh Le, Shihang Li, Thang D.V. Truong***
 
-To appear the Proceedings of 22nd International Conference on Machine Learning and Applications (IEEE ICMLA) 2023.
+Proceedings of 22nd International Conference on Machine Learning and Applications (IEEE ICMLA) 2023.
 
 Code 
 ----
