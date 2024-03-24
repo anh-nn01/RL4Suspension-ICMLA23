@@ -46,5 +46,15 @@ To have a quick start, please use the pretrained Actor/Critic in folder `./check
 If by any chance you find our paper or our code source helpful for your research / project(s), please kindly support us by citing our work. Your endorsement is particularly valuable to us, and we deeply appreciate it!
 
 ```
-  bibtex to be released
+  @INPROCEEDINGS{10459806,
+  author={Nhu, Anh N. and Le, Ngoc-Anh and Li, Shihang and Truong, Thang D.V.},
+  booktitle={2023 International Conference on Machine Learning and Applications (ICMLA)}, 
+  title={Physics-Guided Reinforcement Learning System for Realistic Vehicle Active Suspension Control}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={422-429},
+  keywords={Damping;Suspensions (mechanical systems);Roads;Stability criteria;Control systems;Real-time systems;Vehicle dynamics;Deep Reinforcement Learning;Mechanical En-gineering;Active Suspension System;Vehicle;Vertical Dynamics},
+  doi={10.1109/ICMLA58977.2023.00065}}
+
 ```
