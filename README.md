@@ -1,6 +1,8 @@
 # RL4Suspension-ICMLA23
 
-This is the official PyTorch implementation of the paper: https://ieeexplore.ieee.org/document/10459806
+This is the official PyTorch implementation of the paper: https://ieeexplore.ieee.org/document/10459806. 
+
+The arxiv version is available at \<link to be updated\>
 
 **Physics-Guided Reinforcement Learning System for Realistic Vehicle Active Suspension Control** 
 
@@ -26,11 +28,11 @@ Code
   * (4) update weights & save checkpoints.
 * `execute_training.py`: contains implementation of Ornstein-Uhlenbeck noise, buffer stack, and code to execute the DDPG training framework.
 
-Training and Evluation
+Training and Evaluation
 ----
-To execute the training process, please use `execute_training.py`. 
+To execute the training process, please use either `execute_training.py` or `RL_Training.ipynb`. 
 
-Specifically, please change checkpoint names for Q-Network and Policy Network in `execute_training.py`, and run the following command:
+If you use `execute_training.py` to train model, please change checkpoint names for Q-Network and Policy Network in `execute_training.py`, and run the following command:
 ```
   python3 execute_training.py
 ```
