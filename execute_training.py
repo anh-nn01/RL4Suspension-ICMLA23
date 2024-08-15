@@ -6,9 +6,55 @@ from torch.nn import functional as F
 from scipy.integrate import solve_ivp
 from tqdm.notebook import tqdm
 from road_generator import *
-from config import *
+import config
 from model import *
 from trainer import *
+
+np.random.seed(config.seed)
+torch.manual_seed(config.seed)
+
+""" ODE Systems parameters """
+m1 = config.m1
+m2 = config.m2 
+m = config.m
+cb = config.cb
+kb = config.kb
+kw = config.kw
+dt = config.dt
+TIME = config.TIME
+
+"""--------------------------------------------------------------
+    ODE (Ordinary Differential Equation) of Quarter Car model
+    :t  - timesteps
+    :y0 - initial state [xb, xw, d/dt(xb), d/dt(xw)]
+    :m  - tuple containing (m_body, m_wheel)
+    :cs - constant related to ...
+    :ks - spring stiffness
+    :kw - tire stiffness
+
+    :return [d/dt(xb), d/dt(xw), d2/dt(xb), d2/dt(xw)]
+--------------------------------------------------------------"""
+road_profile = list(RoadProfile().get_profile_by_class("E", config.t_stop, config.dt)[1][1:])
+
+def odefun(t, y0, m, cs, kw, ks):
+    m1=m[0];    # Body mass in kg
+    m2=m[1];    # Wheel mass in kg
+
+    """ Road condition at time step t"""
+    t_idx = min(round(t/dt), len(TIME)-1)
+    xr = road_profile[t_idx]
+    # print(t)
+
+    """ 1. Displacement & Velocity of body & wheel """
+    xb = y0[0]                # x_body        (x1)
+    xw = y0[1]                # x_wheel       (x2)
+    dxb = y0[2]               # d(x_body)/dt  (dx1/dt)
+    dxw = y0[3]               # d(x_wheel)/dt (dx2/dt)
+    """ 2. Acceleration of body & wheel """
+    d2xb = - ks/m1*(xb-xw) - cs/m1*(dxb-dxw) # + kw/m1*xr - kw/m1*xb
+    d2xw = ks/m2*(xb-xw) + cs/m2*(dxb-dxw) + kw/m2*(xr-xw)
+
+    return [dxb,dxw,d2xb,d2xw]
 
 """**********************************************************
     Replay buffer class to enrich past experience
@@ -79,6 +125,7 @@ def get_cs(a):
 def get_ks(a):
     # positive and negative stiffness has different range
     ka = 5000*a if a > 0 else 2500*a
+    # ka = 4000*a if a > 0 else -4500*a
     return kb + ka
 
 """**********************************************************
@@ -100,53 +147,23 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
     rl_ks = []
 
     """ Episode Iteration"""
-    for episode in tqdm(range(num_episodes)):
+    for episode in tqdm(range(config.num_episodes)):
         """--------------------------------------------------------------
             1. Randomly Generate new road profile each episode
         --------------------------------------------------------------"""
+        global road_profile
         # road_profile = generate_road(TIME, MAX_BUMP)
-        road_profile = list(RoadProfile().get_profile_by_class("E", t_stop, dt)[1][1:])
-
-        """--------------------------------------------------------------
-            ODE (Ordinary Differential Equation) of Quarter Car model
-            :t  - timesteps
-            :y0 - initial state [xb, xw, d/dt(xb), d/dt(xw)]
-            :m  - tuple containing (m_body, m_wheel)
-            :cs - constant related to ...
-            :ks - spring stiffness
-            :kw - tire stiffness
-
-            :return [d/dt(xb), d/dt(xw), d2/dt(xb), d2/dt(xw)]
-        --------------------------------------------------------------"""
-        def odefun(t, y0, m, cs, kw, ks):
-            m1=m[0];    # Body mass in kg
-            m2=m[1];    # Wheel mass in kg
-
-            """ Road condition at time step t"""
-            t_idx = min(round(t/dt), len(TIME)-1)
-            xr = road_profile[t_idx]
-            # print(t)
-
-            """ 1. Displacement & Velocity of body & wheel """
-            xb = y0[0]                # x_body        (x1)
-            xw = y0[1]                # x_wheel       (x2)
-            dxb = y0[2]               # d(x_body)/dt  (dx1/dt)
-            dxw = y0[3]               # d(x_wheel)/dt (dx2/dt)
-            """ 2. Acceleration of body & wheel """
-            d2xb = - ks/m1*(xb-xw) - cs/m1*(dxb-dxw) # + kw/m1*xr - kw/m1*xb
-            d2xw = ks/m2*(xb-xw) + cs/m2*(dxb-dxw) + kw/m2*(xr-xw)
-
-            return [dxb,dxw,d2xb,d2xw]
+        road_profile = list(RoadProfile().get_profile_by_class("E", config.t_stop, config.dt)[1][1:])
         
         """--------------------------------------------------------------
                 Exploration factor 
         --------------------------------------------------------------"""
+        output_dim = config.output_dim
+
         if episode < 100:
             ou_action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(output_dim), sigma=np.ones(output_dim) * 0.5)
         elif episode < 200:
-            ou_action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(output_dim), sigma=np.ones(output_dim) * 0.3)
-        elif episode < 500:
-            ou_action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(output_dim), sigma=np.ones(output_dim) * 0.2)
+            ou_action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(output_dim), sigma=np.ones(output_dim) * 0.1)
         else:
             ou_action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(output_dim), sigma=np.ones(output_dim) * 0.05)
         
@@ -166,7 +183,7 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
         """--------------------------------------------------------------
                 3. Each Episode optimization
         --------------------------------------------------------------"""
-        for t_idx, t in enumerate(TIME):
+        for t_idx, t in enumerate(config.TIME):
             """####################################
                 I. State & Action: S{t} & A{t} COMPUTATION
                     (current State & Action)
@@ -176,9 +193,6 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
             dxr = (road_profile[t_idx] - road_profile[t_idx-1]) / dt
             xb_prev, xw_prev, dxb_prev, dxw_prev = np.array(s_ode_prev)[0:4]
             dxr_prev = (road_profile[max(t_idx-1, 0)] - road_profile[max(t_idx-2, 0)]) / dt
-            
-            # s_rl = [xb, xw, dxb, dxw, dxr] # rescale
-            # s_rl = [dxb, dxw, dxr] # rescale
             s_rl = [dxb, dxw, dxr, dxb_prev, dxw_prev, dxr_prev] # rescale
             """ 1.2. Take action a{t} from RL's s{t}"""
             a = trainer.pick_sample(s_rl, ou_action_noise)
@@ -199,7 +213,7 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
             # s_next, r, done, _ = env.step(a)
             """ 2.1. Solve ODE for s{t+1} """
             # del xb, xw, dxb, dxw # delete these variables for debugging purpose
-            yout = solve_ivp(odefun, [t, t+dt], s_ode, args=(m, get_cs(a_cs), kw, get_ks(a_ks) ), dense_output=True)
+            yout = solve_ivp(odefun, [t, t+dt], s_ode, args=(m, get_cs(a_cs), kw, get_ks(a_ks)), dense_output=True)
             # yout.y is the solution of the ODE -> s{t+1}
             xb_next, xw_next, dxb_next, dxw_next = yout.y[:,-1]
             if t_idx < len(TIME)-1:
@@ -225,7 +239,7 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
             """ 3.1. Reward function"""
             # r = -0.7*abs(xb) - 0.3*(dxb)**2
             # r = -0.9*abs(xb) - 0.1*abs(dxb) # - abs(xb-xw)
-            #  r = -0.1*abs(dxb) # -> TRAINED 1 USING THIS (with buffer size 1M)
+            # r = -0.1*abs(dxb) # -> TRAINED 1 USING THIS (with buffer size 1M)
             r = -1/10*abs(dxb_next) # -> TRAINED 2,3,4 USING THIS (with buffer size 100K)
             # r = -1/10*abs(dxb_next) - 1/100*abs(d2xb_next) # -> TRAINED 2,3,4 USING THIS (with buffer size 100K)
             # r = -1/10*abs(xb) - 0.25e2*(abs(xb)**3)
@@ -242,8 +256,8 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
             buffer.add([s_rl, a, r, s_rl_next, float(done)])
             
             """ 3.3. Update model based on buffered experience (st, at, rt, s{t+1}, done) """
-            if buffer.length() >= bs:
-                states, actions, rewards, n_states, dones = buffer.sample(bs)
+            if buffer.length() >= config.bs:
+                states, actions, rewards, n_states, dones = buffer.sample(config.bs)
                 trainer.optimize(states, actions, rewards, n_states, dones)
                 trainer.update_target()
 
@@ -265,9 +279,14 @@ def execute_training(ckpt_Q_origin, ckpt_mu_origin):
             rl_dxb_time = temp_dxb_time
             trainer.save_checkpoints()
 
+        # if episode % 200 == 0 and episode > 0:
+        #     trainer.reduce_lr()
+        #     print('  reduce lr.')
+
 if __name__ == '__main__':
-    ckpt_Q_origin = '../checkpoints/Q_origin_Sep16_2023.pt'
-    ckpt_mu_origin = '../checkpoints/mu_origin_Sep16_2023.pt'
+    save_dir = './checkpoints'
+    ckpt_Q_origin = f'{save_dir}/Q_origin.pt'
+    ckpt_mu_origin = f'{save_dir}/mu_origin.pt'
     print('Start Training Process...')
 
     execute_training(ckpt_Q_origin, ckpt_mu_origin)
