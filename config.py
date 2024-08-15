@@ -1,11 +1,13 @@
 import numpy as np
 import torch
 
+seed = 99
+
 """***************************
         Car Settings
 ***************************"""
 m1 = 450 #kg
-m2 = 70 #kg
+m2 = 45 #kg
 m = [m1,m2]
 cb = 1500    #N/(m/s)
 kb = 15000    #N/m
