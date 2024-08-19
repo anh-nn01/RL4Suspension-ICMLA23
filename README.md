@@ -2,7 +2,7 @@
 
 This is the official PyTorch implementation of the paper: https://ieeexplore.ieee.org/document/10459806. 
 
-The arxiv version is available at \<link to be updated\>
+The arxiv version is available at https://arxiv.org/abs/2408.08425.
 
 **Physics-Guided Reinforcement Learning System for Realistic Vehicle Active Suspension Control** 
 
